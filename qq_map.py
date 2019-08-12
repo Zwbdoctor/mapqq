@@ -1,15 +1,21 @@
 import asyncio
 from math import ceil
+
+import aiomysql
 from requests.utils import quote
 from aio_tools import AioClient
 
 AC =  AioClient()
 KEY = 'OB4BZ-D4W3U-B7VVO-4PJWW-6TKDJ-WPB77'
-DetailUrlList = []
 GET_URLS_FLAG = True
+DetailUrlList = []
+event_loop = asyncio.get_event_loop()       # 初始化事件循环
 Headers = {
     'Referer': "https://lbs.qq.com",
     'User-Agent': "Mozilla/5.0 (MACintosh; Intel MAC OS X 10_14_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/76.0.3809.87 Safari/537.36",
+}
+DB_PARAMS = {
+    'host': 'localhost', 'port': 3306, 'user': 'root', 'password': 'root1234', 'db': 'qmap', 'loop': event_loop
 }
 
 
@@ -49,8 +55,12 @@ async def get_data_by_city(prov: str='河北', city: str='北京', page: int=1):
     data = result.get('data')
     await save(data)
 
-def save(data):
-    ...
+async def save(data):
+    async with aiomysql.create_pool(**DB_PARAMS)  as pool:
+        async with pool.get() as conn:
+            async with conn.cursor() as cur:
+                await cur.execute()
+                # value = await cur.fetchone()
 
 
 async def main():
@@ -76,5 +86,4 @@ async def main():
 
 
 if __name__ == "__main__":
-    event_loop = asyncio.get_event_loop()
     event_loop.run_until_complete(main())
