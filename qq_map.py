@@ -55,11 +55,15 @@ async def get_data_by_city(prov: str='河北', city: str='北京', page: int=1):
     data = result.get('data')
     await save(data)
 
+async def parse(data):
+    ...
+
 async def save(data):
     async with aiomysql.create_pool(**DB_PARAMS)  as pool:
         async with pool.get() as conn:
             async with conn.cursor() as cur:
-                await cur.execute()
+                sql = 'insert into '
+                await cur.execute(sql)
                 # value = await cur.fetchone()
 
 
