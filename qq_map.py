@@ -41,19 +41,23 @@ async def get_province():
 
 
 async def get_data_by_city(prov: str='河北', city: str='北京', page: int=1):
-    url = "https://apis.map.qq.com/ws/plACe/v1/search"
-    querystring = {"boundary": quote(f"region({city}, 0)"), "keyword": "KFC", "page_size": "20",
+    url = "https://apis.map.qq.com/ws/place/v1/search"
+    querystring = {"boundary": quote(f"region({city}, 0)"), "keyword": "游泳馆", "page_size": "20",
         "page_index": str(page), "orderby": "_distance", "key": KEY
     }
     result = await AC.get(url, params=querystring, headers=Headers, result='json')
-    if result.get('status') == 0:
-        raise result.get('message')
+    if result.get('status') != 0:
+        print('exceed the limit')
+        # await asyncio.sleep(0.5)
+        # raise Exception(result.get('message'))
     if GET_URLS_FLAG:
         count = result.get('count')
         DetailUrlList.append([prov, city, count])
+        print(f'got count: {count}')
         return 
     data = result.get('data')
-    await save(data)
+    print('got data')
+    # await save(data)
 
 async def parse(data):
     ...
@@ -73,20 +77,27 @@ async def main():
     provinces = await get_province()
     # 获取详细数据的urllist
     url_tasks = []
+    # semphore = asyncio.Semaphore(5)
+    await AC.set_async_pool(5)
     for x in provinces:
         prov = x.get('prov').get('fullName')
         for city in x.get('citys'):
             future = asyncio.ensure_future(get_data_by_city(prov=prov, city=city))
+            # url_tasks.append(get_data_by_city(prov=prov, city=city))
             url_tasks.append(future)
     await asyncio.wait(url_tasks)
+    # res = await asyncio.gather(*url_tasks)
     # 根据详细数据的urllist获取数据
     GET_URLS_FLAG = False
     get_data_task = []
     for prov, city, count in DetailUrlList:
+        if not count:
+            continue
         for x in range(1, ceil(count/20)):
-            get_data_task.append(asyncio.ensure_future(get_data_by_city(prov=prov, city=city, page=x)))
+            # get_data_task.append(asyncio.ensure_future(get_data_by_city(prov=prov, city=city, page=x)))
+            get_data_task.append(get_data_by_city(prov=prov, city=city, page=x))
     await asyncio.wait(get_data_task)
-    
+    await AC.tear_down()
 
 
 if __name__ == "__main__":
